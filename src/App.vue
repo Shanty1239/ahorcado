@@ -1,7 +1,7 @@
 <template>
   <div class="Inicio" v-if="pantallaInicio">
     <div class="Titulo">
-      <h1>AHORCADO</h1>
+      <h1>AHO</h1>
     </div>
 
     <div class="res">
