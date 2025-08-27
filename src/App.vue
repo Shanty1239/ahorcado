@@ -1,48 +1,59 @@
 <template>
+  <!-- Pantalla inicio -->
   <div class="Inicio" v-if="pantallaInicio">
     <div class="Titulo">
       <h1>AHORCADO</h1>
     </div>
 
     <div class="res">
-      <input v-model="nombre" type="text" id="nombre" placeholder="Nombre del Jugador" />
-      <select v-model="nivel" id="Nivel">
-        <option value="" disabled selected>Selecciona una opción...</option>
-        <option value="libre">Fácil</option>
-        <option value="ocupado">Medio</option>
-        <option value="reservado">Difícil</option>
+      <input v-model="nombreJugador" type="text" placeholder="Nombre del Jugador" />
+
+      <!-- Select de nivel -->
+      <select v-model="nivel">
+        <option value="" disabled selected>Selecciona dificultad...</option>
+        <option value="facil">Fácil</option>
+        <option value="medio">Medio</option>
+        <option value="dificil">Difícil</option>
       </select>
-      <button @click="iniciarjuego">Jugar</button>
+
+      <!-- Select de categoría -->
+      <select v-model="categoria" :disabled="!nivel">
+        <option value="" disabled selected>Selecciona categoría...</option>
+        <option v-for="(cat, i) in categoriasDisponibles" :key="i" :value="cat">
+          {{ cat }}
+        </option>
+      </select>
+
+      <button @click="iniciarjuego" :disabled="!nivel || !categoria">Jugar</button>
     </div>
   </div>
 
+  <!-- Pantalla juego -->
   <div class="juego" v-else>
     <div class="segundaPantalla">
-      <h2 class="saludo">¡Buena suerte, {{ nombre }}!</h2>
+      <p class="saludo">Bienvenido, {{ nombreJugador || 'Jugador' }} 👾</p>
 
-      <!-- Palabra oculta -->
+      <!-- Astronauta -->
+      <div class="astronauta">
+        <img v-for="(parte, index) in imagenActual" :key="index" :src="parte" :class="['parte', `parte-${index}`]" />
+      </div>
+
+      <!-- Palabra -->
       <div class="palabra">
-        <span v-for="(letra, index) in palabra" :key="index">
+        <span v-for="(letra, i) in palabra" :key="i">
           {{ letrasCorrectas.includes(letra) ? letra : '_' }}
         </span>
       </div>
 
-     
-      <input
-        v-model="letraIngresada"
-        maxlength="1"
-        @keyup.enter="verificarLetra"
-        placeholder="Ingresa una letra"
-        class="input-letra"
-      />
-
+      <!-- Entrada -->
+      <input v-model="letraIngresada" maxlength="1" @keyup.enter="verificarLetra"
+        placeholder="Ingresa una letra" class="input-letra" />
 
       <p class="fallidas">Letras fallidas: {{ letrasIncorrectas.join(', ') }}</p>
-      <p class="fallidas">Intentos restantes: {{ intentosRestantes }}</p>
+      <p>Intentos restantes: {{ intentosRestantes }}</p>
 
-      <!-- Resultado -->
-      <p v-if="ganaste" class="ganaste">¡Ganaste! 🎉</p>
-      <p v-if="perdiste" class="perdiste">Perdiste. La palabra era: {{ palabra }}</p>
+      <p v-if="ganaste" class="ganaste">🎉 ¡Ganaste!</p>
+      <p v-if="perdiste" class="perdiste">💀 Perdiste. La palabra era: {{ palabra }}</p>
     </div>
   </div>
 </template>
@@ -50,18 +61,47 @@
 <script setup>
 import { ref, computed } from 'vue'
 
+// estado pantallas
 const pantallaInicio = ref(true)
-const nombre = ref('')
+const nombreJugador = ref('')
 const nivel = ref('')
+const categoria = ref('')
 
-// lógica del juego
-const palabras = ['sol', 'luna', 'estrella', 'planeta', 'cometa']
-const palabra = ref(palabras[Math.floor(Math.random() * palabras.length)])
+// Palabras organizadas por nivel y categoría
+const palabrasPorNivel = {
+  facil: {
+    animales: ['gato', 'perro', 'lobo', 'pez'],
+    frutas: ['uva', 'kiwi', 'mango', 'pera'],
+    espacio: ['sol', 'luna', 'marte', 'roca']
+  },
+  medio: {
+    animales: ['jirafa', 'delfin', 'caballo', 'conejo'],
+    frutas: ['sandia', 'papaya', 'cereza', 'banano'],
+    espacio: ['galaxia', 'cometa', 'asteroide', 'orbita']
+  },
+  dificil: {
+    animales: ['hipopotamo', 'ornitorrinco', 'canguro', 'armadillo'],
+    frutas: ['granadilla', 'frambuesa', 'maracuya', 'arándano'],
+    espacio: ['constelacion', 'supernova', 'nebulosa', 'exoplaneta']
+  }
+}
 
+const palabra = ref('')
 const letrasCorrectas = ref([])
 const letrasIncorrectas = ref([])
 const letraIngresada = ref('')
-const intentosMaximos = 6
+
+// ahora son 5 intentos porque hay 5 partes
+const intentosMaximos = 5
+
+// imágenes del astronauta en orden de aparición
+const partesAstronauta = [
+  new URL('./assets/astronauta/casco.png', import.meta.url).href,
+  new URL('./assets/astronauta/tronco.png', import.meta.url).href,
+  new URL('./assets/astronauta/brazo_izquierdo.png', import.meta.url).href,
+  new URL('./assets/astronauta/brazo_derecho.png', import.meta.url).href,
+  new URL('./assets/astronauta/piernas.png', import.meta.url).href
+]
 
 const intentosRestantes = computed(() => intentosMaximos - letrasIncorrectas.value.length)
 
@@ -70,6 +110,12 @@ const ganaste = computed(() =>
 )
 
 const perdiste = computed(() => intentosRestantes.value <= 0 && !ganaste.value)
+
+// Imagen acumulada según errores
+const imagenActual = computed(() => partesAstronauta.slice(0, letrasIncorrectas.value.length))
+
+// categorías disponibles según nivel
+const categoriasDisponibles = computed(() => (nivel.value ? Object.keys(palabrasPorNivel[nivel.value]) : []))
 
 function verificarLetra() {
   const letra = letraIngresada.value.toLowerCase()
@@ -94,13 +140,18 @@ function verificarLetra() {
 }
 
 function iniciarjuego() {
-  if (nombre.value && nivel.value) {
-    pantallaInicio.value = false
-  } else {
-    alert('Por favor ingresa tu nombre y selecciona una dificultad.')
-  }
+  if (!nivel.value || !categoria.value) return
+
+  const listaPalabras = palabrasPorNivel[nivel.value][categoria.value]
+  palabra.value = listaPalabras[Math.floor(Math.random() * listaPalabras.length)]
+
+  letrasCorrectas.value = []
+  letrasIncorrectas.value = []
+  letraIngresada.value = ''
+  pantallaInicio.value = false
 }
 </script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -157,7 +208,24 @@ body {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
 }
 
-select, button, input {
+/* Contenedor selects */
+.controles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.controles label {
+  color: #84DDFF;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  text-shadow: 1px 1px 3px #000;
+}
+
+select,
+button,
+input {
   margin: 10px;
   padding: 10px 20px;
   font-size: 1rem;
@@ -182,7 +250,8 @@ select:hover {
   width: 90vw;
   height: 90vh;
   margin: 5vh auto;
-  background-image: url(./img/fondo.jpeg);
+  border-radius: 20px;
+  background-image: url(./assets/fondo.jpeg);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -205,6 +274,58 @@ select:hover {
   margin-bottom: 30px;
   color: #84DDFF;
   text-shadow: 1px 1px 3px #000;
+}
+
+.astronauta {
+  position: relative;
+  width: 200px;
+  height: 320px;
+  margin: 20px auto;
+}
+
+.parte {
+  position: absolute;
+  image-rendering: pixelated;
+}
+
+/* casco */
+.parte-0 {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+}
+
+/* tronco */
+.parte-1 {
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+}
+
+/* brazo izquierdo */
+.parte-2 {
+  top: 110px;
+  left: 0;
+  transform: none;
+  width: 70px;
+}
+
+/* brazo derecho */
+.parte-3 {
+  top: 110px;
+  right: 0;
+  transform: none;
+  width: 70px;
+}
+
+/* piernas */
+.parte-4 {
+  top: 200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
 }
 
 .palabra {
@@ -238,3 +359,4 @@ select:hover {
   margin-top: 20px;
 }
 </style>
+
