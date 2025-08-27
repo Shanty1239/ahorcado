@@ -27,7 +27,7 @@
         </span>
       </div>
 
-      <!-- Entrada de letra -->
+     
       <input
         v-model="letraIngresada"
         maxlength="1"
@@ -36,7 +36,7 @@
         class="input-letra"
       />
 
-      <!-- Letras incorrectas -->
+
       <p class="fallidas">Letras fallidas: {{ letrasIncorrectas.join(', ') }}</p>
       <p class="fallidas">Intentos restantes: {{ intentosRestantes }}</p>
 
